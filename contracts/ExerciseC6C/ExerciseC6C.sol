@@ -25,6 +25,7 @@ contract ExerciseC6C {
 
     address private contractOwner;              // Account used to deploy contract
     mapping(string => Profile) employees;      // Mapping for storing employees
+    mapping(address => uint256) private authorizedContracts;
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -57,6 +58,11 @@ contract ExerciseC6C {
     modifier requireContractOwner()
     {
         require(msg.sender == contractOwner, "Caller is not contract owner");
+        _;
+    }
+
+    modifier isCallerAuthorized() {
+        require(authorizedContracts[msg.sender] == 1, "It's not autherized");
         _;
     }
 
@@ -124,8 +130,7 @@ contract ExerciseC6C {
                                     uint256 bonus
 
                                 )
-                                internal
-                                requireContractOwner
+                                external
     {
         require(employees[id].isRegistered, "Employee is not registered.");
 
@@ -134,40 +139,47 @@ contract ExerciseC6C {
 
     }
 
-    function calculateBonus
-                            (
-                                uint256 sales
-                            )
-                            internal
-                            view
-                            requireContractOwner
-                            returns(uint256)
-    {
-        if (sales < 100) {
-            return sales.mul(5).div(100);
-        }
-        else if (sales < 500) {
-            return sales.mul(7).div(100);
-        }
-        else {
-            return sales.mul(10).div(100);
-        }
+    function authorizeContract(address dataContract) external requireContractOwner {
+        authorizedContracts[dataContract] = 1;
     }
 
-    function addSale
-                                (
-                                    string id,
-                                    uint256 amount
-                                )
-                                external
-                                requireContractOwner
-    {
-        updateEmployee(
-                        id,
-                        amount,
-                        calculateBonus(amount)
-        );
+    function deauthorizeContract(address dataContract) external requireContractOwner {
+        delete authorizedContracts[dataContract];
     }
+    // function calculateBonus
+    //                         (
+    //                             uint256 sales
+    //                         )
+    //                         internal
+    //                         view
+    //                         requireContractOwner
+    //                         returns(uint256)
+    // {
+    //     if (sales < 100) {
+    //         return sales.mul(5).div(100);
+    //     }
+    //     else if (sales < 500) {
+    //         return sales.mul(7).div(100);
+    //     }
+    //     else {
+    //         return sales.mul(10).div(100);
+    //     }
+    // }
+
+    // function addSale
+    //                             (
+    //                                 string id,
+    //                                 uint256 amount
+    //                             )
+    //                             external
+    //                             requireContractOwner
+    // {
+    //     updateEmployee(
+    //                     id,
+    //                     amount,
+    //                     calculateBonus(amount)
+    //     );
+    // }
 
 
 }
