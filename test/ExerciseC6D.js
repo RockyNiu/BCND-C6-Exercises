@@ -6,25 +6,45 @@ contract('ExerciseC6D', async (accounts) => {
 
   const TEST_ORACLES_COUNT = 20;
   let config;
+  let events;
   before('setup contract', async () => {
     config = await Test.Config(accounts);
 
     // Watch contract events
     const ON_TIME = 10;
-    const events = config.exerciseC6D.allEvents();
-    events
-      .on('data', (result) => {
-        if (result.event === 'OracleRequest') {
-          console.log(`\n\nOracle Requested: index: ${result.args.index.toNumber()}, flight:  ${result.args.flight}, timestamp: ${result.args.timestamp.toNumber()}`);
-        } else {
-          console.log(`\n\nFlight Status Available: flight: ${result.args.flight}, timestamp: ${result.args.timestamp.toNumber()}, status: ${result.args.status.toNumber() == ON_TIME ? 'ON TIME' : 'DELAYED'}, verified: ${result.args.verified ? 'VERIFIED' : 'UNVERIFIED'}`);
-        }
-      })
+    events = config.exerciseC6D.allEvents({
+      fromBlock: 0
+    }, function (error, event) { console.log(event); });
+    console.log(JSON.stringify(events));
+    events.on('data', (result) => {
+      console.log(result);
+      if (result.event === 'OracleRequest') {
+        console.log(`\n\nOracle Requested: index: ${result.returnValues.index}, flight:  ${result.returnValues.flight}, timestamp: ${result.returnValues.timestamp}`);
+      } else {
+        console.log(`\n\nFlight Status Available: flight: ${result.returnValues.flight}, timestamp: ${result.returnValues.timestamp}, status: ${result.returnValues.status.toNumber() == ON_TIME ? 'ON TIME' : 'DELAYED'}, verified: ${result.returnValues.verified ? 'VERIFIED' : 'UNVERIFIED'}`);
+      }
+    })
       .on('error', console.error);
 
     // Past events
     //events.get((error, logs) => {  });
 
+  });
+
+  after('done', async () => {
+    // console.log(JSON.stringify(events));
+    const pastEventsOracleRequest = await config.exerciseC6D.getPastEvents('OracleRequest', {
+      fromBlock: 0,
+      toBlock: 'latest'
+    }, function (error, events) { console.log(events); })
+    console.log(JSON.stringify(pastEventsOracleRequest));
+
+    console.log("*************");
+    const pastEventsFlightStatusInfo = await config.exerciseC6D.getPastEvents('FlightStatusInfo', {
+      fromBlock: 0,
+      toBlock: 'latest'
+    }, function (error, events) { console.log(events); })
+    console.log(JSON.stringify(pastEventsFlightStatusInfo));
   });
 
 
@@ -35,17 +55,18 @@ contract('ExerciseC6D', async (accounts) => {
 
     // ACT
     for (let a = 1; a < TEST_ORACLES_COUNT; a++) {
+      // console.log(`${a}: ${accounts[a]}`);
       await config.exerciseC6D.registerOracle({ from: accounts[a], value: fee });
       const result = await config.exerciseC6D.getOracle(accounts[a]);
-      console.log(`Oracle: Registered: ${result[0]}, ${result[1]}, ${result[2]}`);
+      // console.log(`Oracle: Registered: ${result[0]}, ${result[1]}, ${result[2]}`);
     }
   });
 
   it('can request flight status', async () => {
 
     // ARRANGE
-    let flight = 'ND1309'; // Course number
-    let timestamp = Math.floor(Date.now() / 1000);
+    const flight = 'ND1309'; // Course number
+    const timestamp = Math.floor(Date.now() / 1000);
 
     // Submit a request for oracles to get status information for a flight
     await config.exerciseC6D.fetchFlightStatus(flight, timestamp);
@@ -62,7 +83,8 @@ contract('ExerciseC6D', async (accounts) => {
       // For a real contract, we would not want to have this capability
       // so oracles can remain secret (at least to the extent one doesn't look
       // in the blockchain data)
-      let oracleIndexes = await config.exerciseC6D.getOracle(accounts[a]);
+      const oracleIndexes = await config.exerciseC6D.getOracle(accounts[a]);
+      console.log(JSON.stringify(oracleIndexes));
       for (let idx = 0; idx < 3; idx++) {
 
         try {
@@ -72,11 +94,12 @@ contract('ExerciseC6D', async (accounts) => {
           // Check to see if flight status is available
           // Only useful while debugging since flight status is not hydrated until a 
           // required threshold of oracles submit a response
-          //let flightStatus = await config.exerciseC6D.viewFlightStatus(flight, timestamp);
-          //console.log('\nPost', idx, oracleIndexes[idx].toNumber(), flight, timestamp, flightStatus);
+          const flightStatus = await config.exerciseC6D.viewFlightStatus(flight, timestamp);
+          console.log('\nPost', idx, oracleIndexes[idx], flight, timestamp, flightStatus);
         }
         catch (e) {
           // Enable this when debugging
+          // console.log(e);
           // console.log('\nError', idx, oracleIndexes[idx].toNumber(), flight, timestamp);
         }
 

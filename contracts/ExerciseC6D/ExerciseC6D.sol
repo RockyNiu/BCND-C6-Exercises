@@ -1,4 +1,5 @@
 pragma solidity ^0.4.25;
+// import "hardhat/console.sol";
 
 // It's important to avoid vulnerabilities due to numeric overflow bugs
 // OpenZeppelin's SafeMath library, when used correctly, protects agains such bugs
@@ -180,8 +181,9 @@ contract ExerciseC6D {
 
 
         // CODE EXERCISE 3: Require that the response is being submitted for a request that is still open
-        bytes32 key = 0; /* Replace 0 with code to generate a key using index, flight and timestamp */
-
+        bytes32 key = keccak256(abi.encodePacked(index, flight, timestamp)); /* Replace 0 with code to generate a key using index, flight and timestamp */
+        // console.logBool(oracleResponses[key].isOpen);
+        require(oracleResponses[key].isOpen, "Flight or timestamp do not match oracle request");
 
         oracleResponses[key].responses[statusId].push(msg.sender);
 
@@ -193,6 +195,7 @@ contract ExerciseC6D {
             /* Enter code here */
 
             // CODE EXERCISE 3: Announce to the world that verified flight status information is available
+            emit FlightStatusInfo(flight, timestamp, statusId, true);
             /* Enter code here */
 
             // Save the flight information for posterity
@@ -200,7 +203,7 @@ contract ExerciseC6D {
             flights[flightKey] = FlightStatus(true, statusId);
         } else {
             // Oracle submitting response but MIN_RESPONSES threshold not yet reached
-
+            emit FlightStatusInfo(flight, timestamp, statusId, false);
             // CODE EXERCISE 3: Announce to the world that verified flight status information is available
             /* Enter code here */
         }
